@@ -15,10 +15,14 @@
 #define SCREEN_WIDTH 1080
 #define SCREEN_HEIGHT 720
 
-#define RAYCOUNTMAX 8
-#define RAYSPERPIXEL 1
+// #define RAYCOUNTMAX 16
+// #define RAYSPERPIXEL 16
+
+global u32 RAYCOUNTMAX = 8;
+global u32 RAYSPERPIXEL = 2;
 
 global bool UseCosAtten = false;
+global bool Finalrender = false;
 
 internal Vector3
 CameraControl(Vector3 CameraP)
@@ -65,6 +69,13 @@ CameraControl(Vector3 CameraP)
     if (IsKeyPressed(KEY_R))
     {
         CameraP = {0, -10, 1};
+        RAYSPERPIXEL = 2;
+    }
+
+    if (IsKeyPressed(KEY_P))
+    {
+        RAYCOUNTMAX = 8;
+        Finalrender = !Finalrender;
     }
 
     return(CameraP);
@@ -202,16 +213,16 @@ int main()
     Planes[1].d = 2.0;
     Planes[1].MatIndex = 5;
 
-    sphere Spheres[2] = {}; 
+    sphere Spheres[3] = {}; 
     Spheres[0].Center = {0,0,0};
     Spheres[0].Radius = 1.0f;
     Spheres[0].MatIndex = 2;
     Spheres[1].Center = {3,-1,0};
     Spheres[1].Radius = 1.0f;
     Spheres[1].MatIndex = 3;
-    // Spheres[2].Center = {-2,-1,2};
-    // Spheres[2].Radius = 1.0f;
-    // Spheres[2].MatIndex = 4;
+    Spheres[2].Center = {-2,-1,2};
+    Spheres[2].Radius = 1.0f;
+    Spheres[2].MatIndex = 4;
 
     world World = {};
     World.MaterialCount = 3;
@@ -300,6 +311,7 @@ int main()
             UpdateTexture(texture, Pixels); 
             DrawTexture(texture, 0, 0, WHITE);
             DrawText(TextFormat("Cosine Attenunation: %s", UseCosAtten ? "yes" : "no"),10,30,4,RED);
+            DrawText(TextFormat("Final Render: %s", Finalrender ? "yes" : "no"),10,50,4,RED);
             DrawFPS(10,10);
         EndDrawing();
     }
