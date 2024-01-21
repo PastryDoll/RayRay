@@ -16,12 +16,11 @@
 #define SCREEN_HEIGHT 720
 
 // #define RAYCOUNTMAX 16
-// #define RAYSPERPIXEL 16
+#define RAYSPERPIXELFINAL 32
 
 global u32 RAYCOUNTMAX = 8;
 global u32 RAYSPERPIXEL = 2;
 
-global bool UseCosAtten = false;
 global bool Finalrender = false;
 
 internal Vector3
@@ -61,11 +60,6 @@ CameraControl(Vector3 CameraP)
     }
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    if (IsKeyPressed(KEY_C))
-    {
-        UseCosAtten = !UseCosAtten;
-    }
-
     if (IsKeyPressed(KEY_R))
     {
         CameraP = {0, -10, 1};
@@ -74,7 +68,7 @@ CameraControl(Vector3 CameraP)
 
     if (IsKeyPressed(KEY_P))
     {
-        RAYCOUNTMAX = 8;
+        RAYSPERPIXEL = (RAYSPERPIXEL == RAYSPERPIXELFINAL) ? 2 : RAYSPERPIXELFINAL;
         Finalrender = !Finalrender;
     }
 
@@ -154,22 +148,20 @@ RayCast(world *World, Vector3 RayOrigin, Vector3 RayDirection)
         }
 
         material Mat = World->Materials[HitMatIndex];
-        f32 CosAtten = 1.0f;
-
-        if (UseCosAtten)
-        {
-            CosAtten = Inner(-RayDirection, NextNormal);
-            if (CosAtten < 0)
-            {
-                CosAtten = 0;
-            }
-        }
-
-
         if (HitMatIndex)
         {
-            Result += Hadamard(CosAtten*Mat.EmitColor,Attenuation);
-            Attenuation = Hadamard(CosAtten*Mat.RefColor,Attenuation);
+            // Actually the way we are doing the random Bounce is already the cosine term (Lambertian Distribution)
+            // f32 CosAtten = 1.0f;
+            // if (UseCosAtten)
+            // {
+            //     CosAtten = Inner(-RayDirection, NextNormal);
+            //     if (CosAtten < 0)
+            //     {
+            //         CosAtten = 0;
+            //     }
+            // }
+            Result += Hadamard(Mat.EmitColor,Attenuation);
+            Attenuation = Hadamard(Mat.RefColor,Attenuation);
             RayOrigin = NextOrigin;
             // RayOrigin += HitDistance*RayDirection;
             Vector3 PureBounce = RayDirection - 2.0f*Inner(RayDirection, NextNormal)*NextNormal;
@@ -196,12 +188,14 @@ int main()
     SetTargetFPS(60);        
 
     material Materials[6] = {}; 
-    Materials[0].EmitColor = {0.5f,0.5f,0.5f};
+    Materials[0].EmitColor = {1.0f,1.0f,1.0f};
+    Materials[0].Specular = 0.0f;
     Materials[1].EmitColor = {0.0f,1.0f,1.0f};
-    Materials[5].EmitColor = {1.0f,0.0f,0.0f};
+    Materials[5].RefColor = {0.1f,0.2f,0.3f};
     Materials[1].Specular = 0.0f;
     Materials[2].RefColor = {0.7f,0.5f,0.3f};
-    Materials[3].EmitColor = {1.0f,1.0f,1.0f};
+    Materials[3].RefColor = {1.0f,1.0f,1.0f};
+    // Materials[3].RefColor = {0.5f,0.5f,0.5f};
     Materials[4].RefColor = {0.2f,0.7f,0.2f};
     Materials[4].Specular = 1.0f;
 
@@ -209,12 +203,12 @@ int main()
     Planes[0].Normal = {0,0,1};
     Planes[0].d = 1.0;
     Planes[0].MatIndex = 1;
-    Planes[1].Normal = {0,0,-1};
-    Planes[1].d = 2.0;
-    Planes[1].MatIndex = 5;
+    // Planes[1].Normal = {0,0,-1};
+    // Planes[1].d = 2.0;
+    // Planes[1].MatIndex = 5;
 
-    sphere Spheres[3] = {}; 
-    Spheres[0].Center = {0,0,0};
+    sphere Spheres[4] = {}; 
+    Spheres[0].Center = {0,0,1};
     Spheres[0].Radius = 1.0f;
     Spheres[0].MatIndex = 2;
     Spheres[1].Center = {3,-1,0};
@@ -223,11 +217,14 @@ int main()
     Spheres[2].Center = {-2,-1,2};
     Spheres[2].Radius = 1.0f;
     Spheres[2].MatIndex = 4;
+    Spheres[3].Center = {0,0,-200};
+    Spheres[3].Radius = 200.0f;
+    Spheres[3].MatIndex = 5;
 
     world World = {};
     World.MaterialCount = 3;
     World.Materials = Materials;
-    World.PlaneCount = ArrayCount(Planes);
+    World.PlaneCount = 0;// ArrayCount(Planes);
     World.Planes = Planes;
     World.SphereCount = ArrayCount(Spheres);
     World.Spheres = Spheres;
@@ -310,8 +307,7 @@ int main()
             }
             UpdateTexture(texture, Pixels); 
             DrawTexture(texture, 0, 0, WHITE);
-            DrawText(TextFormat("Cosine Attenunation: %s", UseCosAtten ? "yes" : "no"),10,30,4,RED);
-            DrawText(TextFormat("Final Render: %s", Finalrender ? "yes" : "no"),10,50,4,RED);
+            DrawText(TextFormat("Final Render: %s", Finalrender ? "yes" : "no"),10,30,4,RED);
             DrawFPS(10,10);
         EndDrawing();
     }
