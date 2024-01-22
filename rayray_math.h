@@ -1,3 +1,40 @@
+inline f32
+Pow(f32 A, f32 B)
+{
+    f32 Result = (f32)pow(A, B);
+    return(Result);
+}
+
+inline u32
+RoundReal32ToUInt32(f32 F)
+{
+    // TODO(casey): Replace with SSE
+    u32 Result = (u32)(F + 0.5f);
+    return(Result);
+}
+
+internal f32
+ExactLinearTosRGB(f32 L)
+{
+    if(L < 0.0f)
+    {
+        L = 0.0f;
+    }
+    
+    if(L > 1.0f)
+    {
+        L = 1.0f;
+    }
+    
+    f32 S = L*12.92f;
+    if(L > 0.0031308f)
+    {
+        S = 1.055f*Pow(L, 1.0f/2.4f) - 0.055f;
+    }
+    
+    return(S);
+}
+
 inline Vector3
 operator*(f32 A, Vector3 B)
 {
@@ -14,6 +51,21 @@ inline Vector3
 operator*(Vector3 B, f32 A)
 {
     Vector3 Result = A*B;
+
+    return(Result);
+}
+inline Vector3
+operator/(Vector3 B, f32 A)
+{
+    Vector3 Result = (1.0f/A)*B;
+
+    return(Result);
+}
+
+inline Vector3
+operator/(f32 A,Vector3 B)
+{
+    Vector3 Result = (1.0f/A)*B;
 
     return(Result);
 }
@@ -157,6 +209,28 @@ Lerp(Vector3 A, f32 t, Vector3 B)
     return(Result);
 }
 
+// internal u32
+// XOrShift32(random_series *Series)
+// {
+//     // NOTE(casey): Reference XOrShift from https://en.wikipedia.org/wiki/Xorshift
+//     u32 x = Series->State;
+    
+//     x ^= x << 13;
+//     x ^= x >> 17;
+//     x ^= x << 5;
+    
+//     Series->State = x;
+    
+//     return(x);
+// }
+
+// internal f32
+// RandomUnilateral(random_series *Series)
+// {
+//     f32 Result = (f32)(XOrShift32(Series) >> 1) / (f32)(U32Max >> 1);
+//     return(Result);
+// }
+
 internal f32
 RandomUnilateral(void)
 {
@@ -164,6 +238,12 @@ RandomUnilateral(void)
     return(Result);
 }
 
+// internal f32
+// RandomBilateral(random_series *Series)
+// {
+//     f32 Result = -1.0 + 2.0f*RandomUnilateral(Series);
+//     return(Result);
+// }
 internal f32
 RandomBilateral(void)
 {

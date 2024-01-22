@@ -83,7 +83,8 @@ RayCast(world *World, Vector3 RayOrigin, Vector3 RayDirection)
     Vector3 Attenuation = {1.0f,1.0f,1.0f};
 
     f32 Tolerance = 0.0001f;
-    f32 MinHitDistance = 0.0001f;
+    // Maybe the most accurate way it to translate t to t - episilon at next RayOrigin to avoid acne effect
+    f32 MinHitDistance = 0.001f;
 
     for (u32 RayCount = 0; RayCount < RAYCOUNTMAX; ++RayCount)
     {
@@ -141,7 +142,8 @@ RayCast(world *World, Vector3 RayOrigin, Vector3 RayDirection)
                     HitMatIndex = Sphere.MatIndex;
 
                     NextOrigin = RayOrigin + t*RayDirection;
-                    NextNormal = NOZ(NextOrigin - Sphere.Center);
+                    // NextNormal = NOZ(NextOrigin - Sphere.Center); //This might be slower
+                    NextNormal = (NextOrigin - Sphere.Center)/Sphere.Radius;
 
                 }
             }
@@ -188,16 +190,17 @@ int main()
     SetTargetFPS(60);        
 
     material Materials[6] = {}; 
-    Materials[0].EmitColor = {1.0f,1.0f,1.0f};
+    Materials[0].EmitColor = {0.75f,0.75f,0.75f};
     Materials[0].Specular = 0.0f;
     Materials[1].EmitColor = {0.0f,1.0f,1.0f};
     Materials[5].RefColor = {0.1f,0.2f,0.3f};
+    Materials[5].Specular = 1.0f;
     Materials[1].Specular = 0.0f;
     Materials[2].RefColor = {0.7f,0.5f,0.3f};
-    Materials[3].RefColor = {1.0f,1.0f,1.0f};
+    Materials[3].EmitColor = {1.0f,0.0f,0.0f};
     // Materials[3].RefColor = {0.5f,0.5f,0.5f};
-    Materials[4].RefColor = {0.2f,0.7f,0.2f};
-    Materials[4].Specular = 1.0f;
+    Materials[4].RefColor = {0.35f,0.85f,0.85f};
+    Materials[4].Specular = 0.9f;
 
     plane Planes[2] = {}; 
     Planes[0].Normal = {0,0,1};
@@ -299,10 +302,25 @@ int main()
                         ColorRay += Contrib*RayCast(&World, RayOrigin, RayDirection);
                     }
 
-                    Color ColorFilm =  ColorFromNormalized((Vector4){ColorRay.x,ColorRay.y,ColorRay.z,1.0f});
+                    f32 R = 255.0f*ExactLinearTosRGB(ColorRay.x);
+                    f32 G = 255.0f*ExactLinearTosRGB(ColorRay.y);
+                    f32 B = 255.0f*ExactLinearTosRGB(ColorRay.z);
+                    f32 A = 255.0f;
+            
+                    u32 ColorFilm = ((RoundReal32ToUInt32(A) << 24) |
+                                    (RoundReal32ToUInt32(B) << 16) |
+                                    (RoundReal32ToUInt32(G) << 8) |
+                                    (RoundReal32ToUInt32(R) << 0));
+                    // Color ColorFilm =  ColorFromNormalized((Vector4){ColorRay.x,ColorRay.y,ColorRay.z,1.0f});
+                    // printf("ColorFilm: %u,%u,%u\n", ColorFilm.r,ColorFilm.g,ColorFilm.b);
+                    // if ((ColorRay.x > 0.9) || (ColorRay.y > 1.0) || (ColorRay.z > 1.0))
+                    // {
+                    //     printf("ColorRay: %f,%f,%f\n", ColorRay.x,ColorRay.y,ColorRay.z);
+                    // }
 
                     // PIXELFORMAT_UNCOMPRESSED_R8G8B8A8
-                    *Out++ = ((u32)ColorFilm.a << 24) | ((u32)ColorFilm.b << 16) | ((u32)ColorFilm.g << 8) | ColorFilm.r;
+                    *Out++ = ColorFilm;
+                    // *Out++ = ((u32)ColorFilm.a << 24) | ((u32)ColorFilm.b << 16) | ((u32)ColorFilm.g << 8) | ColorFilm.r;
                 }
             }
             UpdateTexture(texture, Pixels); 

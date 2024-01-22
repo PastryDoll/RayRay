@@ -24,7 +24,6 @@ typedef double f64;
 // #define Tau32 6.28318530717958647692f
 #define ArrayCount(Array) (sizeof(Array) / sizeof((Array)[0]))
 
-
 // struct material
 // {
 //     f32 Specular; // NOTE(case): 0 is pure diffuse ("chalk"), 1 is pure specular ("mirror")
@@ -95,4 +94,9 @@ struct cast_state
 //     v3 FinalColor;
 //     u64 BouncesComputed;
 //     u64 LoopsComputed;
+};
+
+struct random_series
+{
+    u32 State;
 };
