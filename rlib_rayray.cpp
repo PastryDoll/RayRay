@@ -18,7 +18,7 @@
 // #define RAYCOUNTMAX 16
 #define RAYSPERPIXELFINAL 32
 
-global u32 RAYCOUNTMAX = 8;
+global u32 RAYCOUNTMAX = 12;
 global u32 RAYSPERPIXEL = 2;
 
 global bool Finalrender = false;
@@ -78,13 +78,12 @@ CameraControl(Vector3 CameraP)
 internal Vector3
 RayCast(world *World, Vector3 RayOrigin, Vector3 RayDirection)
 {
-    // Vector3 Result = World->Materials[0].Color;
     Vector3 Result = {};
     Vector3 Attenuation = {1.0f,1.0f,1.0f};
 
     f32 Tolerance = 0.0001f;
     // Maybe the most accurate way it to translate t to t - episilon at next RayOrigin to avoid acne effect
-    f32 MinHitDistance = 0.001f;
+    f32 MinHitDistance = 0.0f;
 
     for (u32 RayCount = 0; RayCount < RAYCOUNTMAX; ++RayCount)
     {
@@ -107,7 +106,7 @@ RayCast(world *World, Vector3 RayOrigin, Vector3 RayDirection)
                     HitDistance = t;
                     HitMatIndex = Plane.MatIndex;
 
-                    NextOrigin = RayOrigin + t*RayDirection;
+                    NextOrigin = RayOrigin + (t-0.001f)*RayDirection;
                     NextNormal = Plane.Normal;
                 }
             }
@@ -119,15 +118,15 @@ RayCast(world *World, Vector3 RayOrigin, Vector3 RayDirection)
             
             Vector3 SphereRelativeRayOrigin = RayOrigin - Sphere.Center;
             f32 a = Inner(RayDirection, RayDirection);
-            f32 b = 2.0f*Inner(SphereRelativeRayOrigin, RayDirection);
+            f32 halfb = Inner(SphereRelativeRayOrigin, RayDirection);
             f32 c = Inner(SphereRelativeRayOrigin,SphereRelativeRayOrigin) - Sphere.Radius*Sphere.Radius;
 
-            f32 Dem = 2.0f*a;
-            f32 RootTerm = SquareRoot(b*b - 4*a*c);
+            f32 Dem = a;
+            f32 RootTerm = SquareRoot(halfb*halfb - a*c);
             if (RootTerm > Tolerance)
             {
-                f32 tplus = (-b + RootTerm)/Dem;
-                f32 tneg = (-b - RootTerm)/Dem;
+                f32 tplus = (-halfb + RootTerm)/Dem;
+                f32 tneg = (-halfb - RootTerm)/Dem;
 
                 f32 t = tplus;
 
@@ -141,10 +140,10 @@ RayCast(world *World, Vector3 RayOrigin, Vector3 RayDirection)
                     HitDistance = t;
                     HitMatIndex = Sphere.MatIndex;
 
-                    NextOrigin = RayOrigin + t*RayDirection;
+                    NextOrigin = RayOrigin + (t-0.001f)*RayDirection;
                     // NextNormal = NOZ(NextOrigin - Sphere.Center); //This might be slower
                     NextNormal = (NextOrigin - Sphere.Center)/Sphere.Radius;
-
+                    
                 }
             }
         }
@@ -152,20 +151,20 @@ RayCast(world *World, Vector3 RayOrigin, Vector3 RayDirection)
         material Mat = World->Materials[HitMatIndex];
         if (HitMatIndex)
         {
-            // Actually the way we are doing the random Bounce is already the cosine term (Lambertian Distribution)
-            // f32 CosAtten = 1.0f;
-            // if (UseCosAtten)
-            // {
-            //     CosAtten = Inner(-RayDirection, NextNormal);
-            //     if (CosAtten < 0)
-            //     {
-            //         CosAtten = 0;
-            //     }
-            // }
             Result += Hadamard(Mat.EmitColor,Attenuation);
             Attenuation = Hadamard(Mat.RefColor,Attenuation);
             RayOrigin = NextOrigin;
+
+            // Maybe we need to check when something is inside.. This a piori show acne problems.. 
+            bool InsideRay = Inner(NextNormal, RayDirection) > 0.0001;
+            NextNormal = InsideRay ? -NextNormal : NextNormal;
+            if (InsideRay)
+            {   
+                Result = {0,0,0};
+                break;
+            }
             // RayOrigin += HitDistance*RayDirection;
+
             Vector3 PureBounce = RayDirection - 2.0f*Inner(RayDirection, NextNormal)*NextNormal;
             Vector3 RandomVector = {RandomBilateral(),RandomBilateral(),RandomBilateral()};
             Vector3 RandomBounce = NOZ(NextNormal +  RandomVector);
@@ -193,11 +192,11 @@ int main()
     Materials[0].EmitColor = {0.75f,0.75f,0.75f};
     Materials[0].Specular = 0.0f;
     Materials[1].EmitColor = {0.0f,1.0f,1.0f};
-    Materials[5].RefColor = {0.1f,0.2f,0.3f};
-    Materials[5].Specular = 1.0f;
+    Materials[5].EmitColor = {0.1f,0.2f,0.3f};
+    Materials[5].Specular = 0.95f;
     Materials[1].Specular = 0.0f;
     Materials[2].RefColor = {0.7f,0.5f,0.3f};
-    Materials[3].EmitColor = {1.0f,0.0f,0.0f};
+    Materials[3].EmitColor = {100.0f,0.0f,0.0f};
     // Materials[3].RefColor = {0.5f,0.5f,0.5f};
     Materials[4].RefColor = {0.35f,0.85f,0.85f};
     Materials[4].Specular = 0.9f;
